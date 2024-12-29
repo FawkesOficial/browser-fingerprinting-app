@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Fingerprinting</title>
+    <script>
+        async function collectFingerprint() {
+            const fingerprint = {
+                userAgent: navigator.userAgent,
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+                colorDepth: window.screen.colorDepth,
+                language: navigator.language,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                platform: navigator.platform,
+                cookiesEnabled: navigator.cookieEnabled,
+                doNotTrack: navigator.doNotTrack,
+                plugins: Array.from(navigator.plugins).map(p => p.name),
+                canvasFingerprint: getCanvasFingerprint(),
+                webglFingerprint: getWebGLFingerprint()
+            };
+
+            const response = await fetch('/log_fingerprint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(fingerprint)
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                document.getElementById('result').innerText = `You are ${result.user_id}. Your personal fingerprint is: ${result.fingerprint}`;
+            } else {
+                document.getElementById('result').innerText = `Error: ${result.error}`;
+            }
+        }
+
+        function getCanvasFingerprint() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillText('Fingerprinting', 2, 2);
+            return canvas.toDataURL();
+        }
+
+        function getWebGLFingerprint() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl');
+            if (!gl) return null;
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'unknown';
+        }
+
+        window.onload = collectFingerprint;
+    </script>
+</head>
+<body>
+    <h1>Browser Fingerprinting Experiment</h1>
+    <p id="result">Data is being collected...</p>
+</body>
+</html>
